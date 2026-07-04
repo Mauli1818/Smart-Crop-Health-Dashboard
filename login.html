@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>शेतकरी लॉगिन | Krishi Portal</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans Devanagari', 'Poppins', sans-serif; }
+    </style>
+</head>
+<body class="bg-stone-100 min-h-screen flex flex-col justify-center items-center p-4">
+
+    <!-- FARMER PORTAL MOBILE CONTAINER -->
+    <div class="w-full max-w-sm bg-white border border-stone-200 rounded-2xl shadow-xl p-6 relative overflow-hidden">
+        
+        <div class="absolute top-0 left-0 right-0 h-2 bg-emerald-600"></div>
+        
+        <!-- HEADER -->
+        <div class="text-center mb-6 mt-2">
+            <div class="inline-flex bg-emerald-50 text-emerald-600 p-4 rounded-full border border-emerald-100 mb-3 shadow-sm">
+                <i class="fa-solid fa-tractor text-3xl"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-stone-800 tracking-tight">कृषी सेवा पोर्टल</h2>
+            <p class="text-sm font-medium text-emerald-700 mt-1">आपलं स्वागत आहे, बळीराजा!</p>
+        </div>
+
+        <!-- ALERT BOX -->
+        <div id="alertBox" class="hidden text-xs p-3 rounded-xl mb-4 border flex items-center gap-2 font-medium"></div>
+
+        <!-- AUTH FORM -->
+        <form id="authForm" class="space-y-5" onsubmit="return false;">
+            
+            <!-- STEP 1: Mobile Number -->
+            <div id="phoneSection" class="space-y-4">
+                <div>
+                    <label class="text-xs font-bold text-stone-600 block mb-1.5">तुमचा मोबाईल नंबर टाका</label>
+                    <div class="relative flex">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-stone-500 font-bold text-sm border-r border-stone-200 my-2 pr-2">
+                            +91
+                        </span>
+                        <input type="tel" id="phoneNumber" required placeholder="9876543210" maxlength="10" 
+                               class="w-full pl-16 pr-4 py-3 bg-stone-50 text-base border border-stone-300 rounded-xl focus:outline-none focus:border-emerald-600 focus:bg-white text-stone-800 placeholder-stone-400 font-medium transition-all shadow-inner">
+                    </div>
+                </div>
+                
+                <button type="button" id="btnSendOtp" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-md shadow-emerald-700/20 cursor-pointer">
+                    <i class="fa-solid fa-paper-plane"></i> ओटीपी (OTP) पाठवा
+                </button>
+            </div>
+
+            <!-- STEP 2: OTP Input -->
+            <div id="otpSection" class="hidden space-y-4">
+                <div>
+                    <label class="text-xs font-bold text-stone-600 block mb-1.5">आलेला ६-अंकी ओटीपी टाका</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-stone-400">
+                            <i class="fa-solid fa-lock text-sm"></i>
+                        </span>
+                        <input type="text" id="otpCode" placeholder="123456" maxlength="6" 
+                               class="w-full pl-10 pr-4 py-3 bg-stone-50 text-lg border border-stone-300 rounded-xl focus:outline-none focus:border-emerald-600 focus:bg-white text-stone-800 placeholder-stone-400 tracking-[0.4em] font-bold text-center transition-all shadow-inner">
+                    </div>
+                </div>
+                
+                <button type="button" id="btnVerifyOtp" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-md shadow-emerald-700/20 cursor-pointer">
+                    <i class="fa-solid fa-circle-check"></i> पडताळणी करा आणि प्रवेश करा
+                </button>
+            </div>
+
+        </form>
+
+        <!-- FOOTER -->
+        <div class="mt-6 pt-4 border-t border-stone-100 text-center">
+            <p class="text-[11px] text-stone-500 font-medium flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-shield text-emerald-600"></i> संपूर्ण सुरक्षित डिजिटल प्रणाली
+            </p>
+        </div>
+    </div>
+
+    <!-- FIREBASE INTEGRATION VIA IMAGE "2514e94b-c084-407e-bada-89a347829675" -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        // "2514e94b-c084-407e-bada-89a347829675" मधील तुमचे लाइव्ह क्रेडेंशियल्स:
+        const firebaseConfig = {
+            apiKey: "AIzaSyAMnFl4LfIxFpJwEHDSHDT4uE8zdBpKh2k",
+            authDomain: "shetkari-35ec9.firebaseapp.com",
+            projectId: "shetkari-35ec9",
+            storageBucket: "shetkari-35ec9.firebasestorage.app",
+            messagingSenderId: "948150509851",
+            appId: "1:948150509851:web:de1200cdf96f2c0e24f3be",
+            measurementId: "G-2MBK2LY361"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        let confirmationResult = null;
+        const alertBox = document.getElementById('alertBox');
+
+        function showAlert(message, type = 'error') {
+            alertBox.classList.remove('hidden', 'bg-rose-50', 'text-rose-700', 'border-rose-200', 'bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
+            if (type === 'error') {
+                alertBox.classList.add('bg-rose-50', 'text-rose-700', 'border-rose-200');
+                alertBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> <span>${message}</span>`;
+            } else {
+                alertBox.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
+                alertBox.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>${message}</span>`;
+            }
+            alertBox.classList.remove('hidden');
+        }
+
+        function initInvisibleRecaptcha() {
+            if (!window.recaptchaVerifier) {
+                window.recaptchaVerifier = new RecaptchaVerifier(auth, 'btnSendOtp', {
+                    'size': 'invisible',
+                    'callback': (response) => {}
+                });
+            }
+        }
+
+        // Send OTP Handle
+        document.getElementById('btnSendOtp').addEventListener('click', async () => {
+            const rawPhone = document.getElementById('phoneNumber').value;
+            if (!rawPhone || rawPhone.length !== 10) {
+                showAlert("कृपया अचूक १०-अंकी मोबाईल नंबर टाका.");
+                return;
+            }
+
+            const formatPhone = "+91" + rawPhone;
+            initInvisibleRecaptcha();
+            const appVerifier = window.recaptchaVerifier;
+
+            try {
+                showAlert("ओटीपी पाठवत आहे...", "success");
+                confirmationResult = await signInWithPhoneNumber(auth, formatPhone, appVerifier);
+                showAlert("ओटीपी यशस्वीरित्या पाठवला आहे!", "success");
+                
+                document.getElementById('phoneSection').classList.add('hidden');
+                document.getElementById('otpSection').classList.remove('hidden');
+            } catch (error) {
+                console.error(error);
+                showAlert("ओटीपी पाठवता आला नाही. कन्सोल चेक करा किंवा फायरबेसमध्ये 'Phone Auth' इनेबल असल्याची खात्री करा.");
+                if (window.recaptchaVerifier) {
+                    window.recaptchaVerifier.render().then(widgetId => {
+                        grecaptcha.reset(widgetId);
+                    });
+                }
+            }
+        });
+
+        // Verify OTP Handle
+        document.getElementById('btnVerifyOtp').addEventListener('click', async () => {
+            const code = document.getElementById('otpCode').value;
+            if (!code || code.length !== 6) {
+                showAlert("कृपया ६-अंकी ओटीपी कोड टाका.");
+                return;
+            }
+
+            try {
+                const result = await confirmationResult.confirm(code);
+                showAlert("लॉगिन यशस्वी झाले! डॅशबोर्ड उघडत आहे...", "success");
+                setTimeout(() => {
+                    window.location.href = "index.html"; 
+                }, 1000);
+            } catch (error) {
+                showAlert("चूकीचा ओटीपी टाकला आहे. पुन्हा तपासा.");
+            }
+        });
+    </script>
+</body>
+</html>

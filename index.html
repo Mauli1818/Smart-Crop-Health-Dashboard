@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Crop Health Analytics - Pravin</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Leaflet JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet Draw Plugin -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+    <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans">
+
+    <!-- Header -->
+    <header class="bg-emerald-600 text-white p-4 shadow-md flex justify-between items-center">
+        <h1 class="text-xl font-bold flex items-center gap-2">
+            🛰️ Smart Crop Health Satellite Dashboard
+        </h1>
+        <div class="text-sm font-semibold bg-emerald-700 px-3 py-1.5 rounded-lg">
+            User: Pravin
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <div class="max-w-7xl mx-auto p-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Left & Center Side: Map Input & AI Chatbot -->
+        <div class="lg:col-span-2 space-y-4">
+            
+            <!-- Map Card -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                <h2 class="text-lg font-bold text-slate-700 mb-2 flex items-center gap-2">
+                    🗺️ नकाशावर तुमच्या शेताची सीमा आखा
+                </h2>
+                <p class="text-xs text-slate-500 mb-3">
+                    * टीप: डावीकडील **Polygon (बहुभुज)** टूलवर क्लिक करा, नकाशावर किमान ३ कोपरे जोडून क्षेत्र आखा, नंतर विश्लेषण सुरू करा.
+                </p>
+                <!-- Leaflet Map Container -->
+                <div id="map" class="h-[500px] w-full rounded-xl border border-slate-300 z-0"></div>
+                
+                <button id="btn-analyze" onclick="savePolygonData()" class="mt-4 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all duration-200 flex justify-center items-center gap-2">
+                    🚀 Analyze Farm (सॅटेलाईट विश्लेषण सुरू करा)
+                </button>
+            </div>
+
+            <!-- 🤖 नवीन जोडलेला: AI कृषी सहाय्यक Chat Box -->
+            <div class="bg-white rounded-xl shadow-md p-5 mt-5 border border-slate-200">
+                <h2 class="text-xl font-bold mb-3 flex items-center gap-2 text-slate-700">
+                    🤖 AI कृषी सहाय्यक
+                </h2>
+                
+                <!-- Chat Message History Container -->
+                <div id="chat-box" class="space-y-3" style="height:250px; overflow-y:auto; border:1px solid #ddd; padding:10px; border-radius:10px; margin-bottom:10px; background-color: #f8fafc;">
+                    <div class="text-sm text-slate-500 italic p-1">नमस्कार प्रवीण भाऊ! मी तुमचा डिजिटल शेती मित्र आहे. तुमच्या पिकाबद्दल किंवा सॅटेलाईट रिपोर्टबद्दल काहीही प्रश्न विचारा...</div>
+                </div>
+
+                <!-- Input Controls -->
+                <div class="flex gap-2">
+                    <input
+                        id="user-question"
+                        type="text"
+                        placeholder="तुमचा प्रश्न विचारा..."
+                        class="flex-1 border rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        onkeypress="if(event.key === 'Enter') askAI()"
+                    />
+                    <button
+                        onclick="startVoice()"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-lg text-lg transition-colors shadow-sm"
+                        title="आवाज रेकॉर्ड करा (मराठी)">
+                        🎤
+                    </button>
+                    <button
+                        onclick="askAI()"
+                        class="bg-green-600 hover:bg-green-700 text-white px-5 rounded-lg font-bold text-sm transition-colors shadow-sm">
+                        Send
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Side: Dashboard & Analytics -->
+        <div class="space-y-4">
+            
+            <!-- Crop Health Score & Status Tag -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center">
+                <div>
+                    <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider">Crop Health Score</h3>
+                    <div id="crop-score" class="text-4xl font-black text-slate-700 mt-1">--</div>
+                </div>
+                <span id="status-tag" class="text-xs bg-slate-100 text-slate-500 py-1.5 px-3 rounded-full font-semibold">
+                    ⚪ Waiting...
+                </span>
+            </div>
+
+            <!-- Sentinel-2 Indices Card -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                <h3 class="font-bold text-slate-700 mb-3 flex items-center gap-2">
+                    📊 Sentinel-2 Key Vegetation Indices
+                </h3>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-slate-50 p-3 rounded-xl border-l-4 border-l-emerald-500">
+                        <div class="text-xs text-slate-400 font-bold">NDVI</div>
+                        <div id="val-ndvi" class="text-lg font-bold text-slate-700">--</div>
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-xl border-l-4 border-l-blue-500">
+                        <div class="text-xs text-slate-400 font-bold">NDWI</div>
+                        <div id="val-ndwi" class="text-lg font-bold text-slate-700">--</div>
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-xl border-l-4 border-l-purple-500">
+                        <div class="text-xs text-slate-400 font-bold">EVI</div>
+                        <div id="val-evi" class="text-lg font-bold text-slate-700">--</div>
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-xl border-l-4 border-l-yellow-500">
+                        <div class="text-xs text-slate-400 font-bold">SAVI</div>
+                        <div id="val-savi" class="text-lg font-bold text-slate-700">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Satellite Information Card -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                <h3 class="font-bold text-slate-700 mb-3 flex items-center gap-2">
+                    🛰️ Satellite Information
+                </h3>
+                <div class="space-y-2 text-sm">
+                    <p class="flex justify-between border-b border-slate-100 pb-1">
+                        <span class="text-slate-500">Date:</span>
+                        <span id="sat-date" class="font-semibold text-slate-700">--</span>
+                    </p>
+                    <p class="flex justify-between border-b border-slate-100 pb-1">
+                        <span class="text-slate-500">Cloud Cover:</span>
+                        <span class="font-semibold text-slate-700"><span id="cloud">--</span> %</span>
+                    </p>
+                    <p class="flex justify-between border-b border-slate-100 pb-1">
+                        <span class="text-slate-500">Satellite:</span>
+                        <span class="font-semibold text-emerald-600">Sentinel-2 (ESA)</span>
+                    </p>
+                    <p class="flex justify-between">
+                        <span class="text-slate-500">Spatial Resolution:</span>
+                        <span class="font-semibold text-slate-700">10 m</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Weather Card -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                <h3 class="font-bold text-slate-700 mb-3 flex items-center gap-2">
+                    🌦️ Weather (रिअल-टाइम हवामान)
+                </h3>
+                <div class="grid grid-cols-2 gap-3 mt-3">
+                    <div class="bg-amber-50 p-2.5 rounded-xl text-center">
+                        <div class="text-xl">🌡️</div>
+                        <div id="temp" class="text-sm font-bold text-slate-700 mt-1">-- °C</div>
+                    </div>
+                    <div class="bg-blue-50 p-2.5 rounded-xl text-center">
+                        <div class="text-xl">💧</div>
+                        <div id="humidity" class="text-sm font-bold text-slate-700 mt-1">-- %</div>
+                    </div>
+                    <div class="bg-indigo-50 p-2.5 rounded-xl text-center">
+                        <div class="text-xl">🌧️</div>
+                        <div id="rain" class="text-sm font-bold text-slate-700 mt-1">-- mm</div>
+                    </div>
+                    <div class="bg-sky-50 p-2.5 rounded-xl text-center">
+                        <div class="text-xl">💨</div>
+                        <div id="wind" class="text-sm font-bold text-slate-700 mt-1">-- km/h</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Recommendation Card -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                <h3 class="font-bold text-slate-700 mb-2 flex items-center gap-2">
+                    🤖 AI कृषी सल्लागार शिफारसी
+                </h3>
+                <div id="recommendations-box" class="space-y-2 text-xs text-slate-600 mt-2">
+                    <p class="text-slate-400 italic">कृपया नकाशावर शेत आखून विश्लेषण करा...</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // १. नकाशा इनिशियलाइज करणे (Erandeshwar, Maharashtra)
+        const map = L.map('map').setView([19.2736, 76.5452], 14);
+
+        // 🗺️ Google Satellite Maps Layers जोडणे
+        const googleSatellite = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+            attribution: '© Google Maps'
+        }).addTo(map);
+
+        // २. Leaflet Draw Feature Group तयार करणे
+        const drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+
+        // 🛠️ Draw Control Setup
+        const drawControl = new L.Control.Draw({
+            edit: { featureGroup: drawnItems },
+            draw: {
+                polygon: {
+                    allowIntersection: false,
+                    showArea: true,
+                    shapeOptions: { color: '#10b981' }
+                },
+                polyline: false, circle: false, circlemarker: false, marker: false, rectangle: false
+            }
+        });
+        map.addControl(drawControl);
+
+        let currentPolygonCoords = null;
+
+        // ३. आकार काढून पूर्ण झाल्यावर इव्हेंट
+        map.on(L.Draw.Event.CREATED, function (e) {
+            drawnItems.clearLayers();
+            const layer = e.layer;
+            drawnItems.addLayer(layer);
+
+            const geojson = layer.toGeoJSON();
+            currentPolygonCoords = geojson.geometry.coordinates[0]; 
+        });
+
+        // ४. FastAPI बॅकएंडला डेटा पाठवणे (Satellite Analysis)
+        async function savePolygonData() {
+            if (!currentPolygonCoords) {
+                alert("कृपया आधी नकाशावर तुमच्या शेताची सीमा आखा!");
+                return;
+            }
+
+            const btn = document.getElementById("btn-analyze");
+            btn.innerHTML = "🛰️ Fetching Sentinel-2 Image...";
+            btn.disabled = true;
+
+            try {
+                const response = await fetch("http://127.0.0.1:8000/analyze-crop", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ polygon: currentPolygonCoords })
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.detail || "सॅटेलाईट डेटा मिळू शकला नाही.");
+                }
+
+                const data = await response.json();
+
+                // डेटा मॅपिंग
+                document.getElementById('val-ndvi').innerText = data.ndvi.toFixed(3);
+                document.getElementById('val-ndwi').innerText = data.ndwi.toFixed(3);
+                document.getElementById("val-evi").innerText = data.evi.toFixed(3);
+                document.getElementById("val-savi").innerText = data.savi.toFixed(3);
+                document.getElementById("sat-date").innerText = data.satellite_date;
+                document.getElementById("cloud").innerText = data.cloud_percentage;
+
+                // हवामान डेटा मॅपिंग
+                document.getElementById("temp").innerText = (data.weather.temperature ?? "--") + " °C";
+                document.getElementById("humidity").innerText = (data.weather.humidity ?? "--") + " %";
+                document.getElementById("rain").innerText = (data.weather.rainfall ?? data.weather.rain ?? 0) + " mm";
+                document.getElementById("wind").innerText = (data.weather.wind_speed ?? data.weather.wind ?? "--") + " km/h";
+
+                // क्रॉप領ील्थ स्कोअर
+                document.getElementById("crop-score").innerText = data.crop_health_score + " %";
+
+                // हेल्थ स्टेटस लॉजिक
+                const statusTag = document.getElementById("status-tag");
+                if (data.crop_health_score >= 80) {
+                    statusTag.className = "text-xs bg-green-100 text-green-700 py-1.5 px-3 rounded-full inline-block font-semibold";
+                    statusTag.innerText = "🟢 Healthy";
+                } else if (data.crop_health_score >= 60) {
+                    statusTag.className = "text-xs bg-yellow-100 text-yellow-700 py-1.5 px-3 rounded-full inline-block font-semibold";
+                    statusTag.innerText = "🟡 Moderate";
+                } else {
+                    statusTag.className = "text-xs bg-red-100 text-red-700 py-1.5 px-3 rounded-full inline-block font-semibold";
+                    statusTag.innerText = "🔴 Poor";
+                }
+
+                // AI शिफारसी अपडेट करणे
+                const recBox = document.getElementById("recommendations-box");
+                recBox.innerHTML = `
+                    <div class="p-3 bg-green-50 rounded-lg border-l-4 border-green-600 whitespace-pre-line text-slate-700 leading-7 font-medium">
+                        ${data.ai_advice}
+                    </div>
+                `;
+
+            } catch (error) {
+                alert("त्रुटी: " + error.message);
+                console.error(error);
+            } finally {
+                btn.innerHTML = "🚀 Analyze Farm (सॅटेलाईट विश्लेषण सुरू करा)";
+                btn.disabled = false;
+            }
+        }
+
+        // ५. 🤖 AI Chatbot Logic (FastAPI च्या चॅट एंडपॉईंटला कनेक्ट करण्यासाठी)
+        async function askAI() {
+            const inputField = document.getElementById("user-question");
+            const question = inputField.value.trim();
+            if (!question) return;
+
+            const chatBox = document.getElementById("chat-box");
+
+            // User चा मेसेज स्क्रीनवर दाखवणे
+            chatBox.innerHTML += `
+                <div class="flex justify-end">
+                    <div class="bg-emerald-600 text-white p-2.5 rounded-lg text-sm max-w-[80%] shadow-sm font-medium">
+                        ${question}
+                    </div>
+                </div>
+            `;
+            
+            inputField.value = ""; // इनपुट क्लिअर करणे
+            chatBox.scrollTop = chatBox.scrollHeight; // स्क्रोल खाली करणे
+
+            // Loading दाखवणे
+            const loadingId = "load-" + Date.now();
+            chatBox.innerHTML += `
+                <div class="flex justify-start" id="${loadingId}">
+                    <div class="bg-slate-200 text-slate-600 p-2.5 rounded-lg text-sm italic">
+                        विचार करत आहे... 🤖
+                    </div>
+                </div>
+            `;
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                // तुमच्या FastAPI च्या चॅट एपीआय कडे पाठवणे (उदा: /chat-assistant)
+                const response = await fetch("http://127.0.0.1:8000/chat-assistant", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ question: question })
+                });
+
+                const loadingEl = document.getElementById(loadingId);
+                if (loadingEl) loadingEl.remove();
+
+                if (!response.ok) throw new Error("सर्व्हर प्रतिसाद देत नाही.");
+                const data = await response.json();
+
+                // AI चा रिस्पॉन्स स्क्रीनवर दाखवणे
+                chatBox.innerHTML += `
+                    <div class="flex justify-start">
+                        <div class="bg-white text-slate-800 p-2.5 rounded-lg text-sm border border-slate-200 max-w-[80%] shadow-sm leading-relaxed whitespace-pre-line font-medium">
+                            ${data.reply}
+                        </div>
+                    </div>
+                `;
+
+            } catch (error) {
+                const loadingEl = document.getElementById(loadingId);
+                if (loadingEl) loadingEl.remove();
+                
+                chatBox.innerHTML += `
+                    <div class="flex justify-start">
+                        <div class="bg-red-50 text-red-600 p-2.5 rounded-lg text-sm border border-red-200">
+                            त्रुटी: उत्तर मिळवता आले नाही. कृपया सर्व्हर तपासा.
+                        </div>
+                    </div>
+                `;
+            }
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // ६. 🎤 Voice Recognition Logic (मराठी आवाज ऐकण्यासाठी)
+        function startVoice() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert("तुमच्या ब्राउझरमध्ये व्हॉईस टायपिंग सपोर्ट करत नाही. कृपया Google Chrome वापरा.");
+                return;
+            }
+
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'mr-IN'; // मराठी भाषा सेट केली
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            const inputField = document.getElementById("user-question");
+            inputField.placeholder = "बोलत राहा, मी ऐकत आहे... 🎙️";
+
+            recognition.start();
+
+            recognition.onresult = function(event) {
+                const speechToText = event.results[0][0].transcript;
+                inputField.value = speechToText;
+                inputField.placeholder = "तुमचा प्रश्न विचारा...";
+            };
+
+            recognition.onspeechend = function() {
+                recognition.stop();
+            };
+
+            recognition.onerror = function(event) {
+                inputField.placeholder = "तुमचा प्रश्न विचारा...";
+                console.error("व्हॉईस एरर: ", event.error);
+            };
+        }
+    </script>
+</body>
+</html>
