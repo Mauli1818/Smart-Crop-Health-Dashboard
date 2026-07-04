@@ -1,5 +1,4 @@
 import os
-import json
 import ee
 from datetime import datetime, timedelta
 
@@ -11,11 +10,10 @@ service_account = "render-gee@khaupiu-location.iam.gserviceaccount.com"
 
 credentials = ee.ServiceAccountCredentials(
     service_account,
-    key_data=json.loads(os.environ["GEE_SERVICE_ACCOUNT_KEY"])
+    key_data=os.environ["GEE_SERVICE_ACCOUNT_KEY"]
 )
 
 ee.Initialize(credentials)
-
 
 # ===========================
 # Get Latest Sentinel Image
@@ -128,10 +126,8 @@ def analyze_crop(polygon_coords):
 
         if ndvi_value < 0.30:
             recommendations.append("🌱 Poor vegetation detected.")
-
         elif ndvi_value < 0.60:
             recommendations.append("🟡 Moderate crop health.")
-
         else:
             recommendations.append("🟢 Healthy vegetation detected.")
 
@@ -170,7 +166,6 @@ def analyze_crop(polygon_coords):
         }
 
     except Exception as e:
-
         return {
             "status": False,
             "message": str(e)
