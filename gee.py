@@ -1,9 +1,25 @@
+import os
+import json
 import ee
 from datetime import datetime, timedelta
 
+# ===========================
 # Google Earth Engine Initialize
-ee.Initialize(project="khaupiu-location")
+# ===========================
 
+service_account = "render-gee@khaupiu-location.iam.gserviceaccount.com"
+
+credentials = ee.ServiceAccountCredentials(
+    service_account,
+    key_data=json.loads(os.environ["GEE_SERVICE_ACCOUNT_KEY"])
+)
+
+ee.Initialize(credentials)
+
+
+# ===========================
+# Get Latest Sentinel Image
+# ===========================
 
 def get_latest_image(polygon_coords):
 
@@ -25,6 +41,10 @@ def get_latest_image(polygon_coords):
 
     return collection.first()
 
+
+# ===========================
+# Crop Analysis
+# ===========================
 
 def analyze_crop(polygon_coords):
 
@@ -104,7 +124,6 @@ def analyze_crop(polygon_coords):
         # Crop Health Score
         health = int(max(0, min(100, round(ndvi_value * 100))))
 
-        # AI Recommendation
         recommendations = []
 
         if ndvi_value < 0.30:
@@ -120,7 +139,6 @@ def analyze_crop(polygon_coords):
             recommendations.append(
                 "💧 Water stress detected. Irrigation recommended."
             )
-
         else:
             recommendations.append(
                 "✅ Adequate soil moisture available."
@@ -131,8 +149,6 @@ def analyze_crop(polygon_coords):
                 "☁ High cloud cover. Results may be less accurate."
             )
 
-        # Dummy Weather (Later replace with Open-Meteo API)
-
         weather = {
             "temp": 31,
             "humidity": 68,
@@ -141,35 +157,21 @@ def analyze_crop(polygon_coords):
         }
 
         return {
-
             "status": True,
-
             "ndvi": round(ndvi_value, 3),
-
             "ndwi": round(ndwi_value, 3),
-
             "evi": round(evi_value, 3),
-
             "savi": round(savi_value, 3),
-
             "cloud_percentage": round(cloud, 2),
-
             "satellite_date": date,
-
             "crop_health_score": health,
-
             "weather": weather,
-
             "recommendations": recommendations
-
         }
 
     except Exception as e:
 
         return {
-
             "status": False,
-
             "message": str(e)
-
         }
