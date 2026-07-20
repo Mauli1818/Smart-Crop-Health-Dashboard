@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Smart Crop Health Analytics - Pravin</title>
+    
+    <!-- 📱 PWA Meta Tags -->
+    <meta name="theme-color" content="#0a4d26">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="AgriSmart">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="logo.png">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Leaflet JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet Draw Plugin -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+    <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+    <style>
+        .leaflet-control-container { z-index: 10 !important; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #136934; border-radius: 10px; }
+        body { touch-action: pan-x pan-y; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col md:flex-row pb-16 md:pb-0 select-none">
+
+    <!-- 🚨 Custom Modern UI Notification/Alert Modal -->
+    <div id="custom-alert" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[99999] flex items-center justify-center p-4 transition-all duration-300">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 transform scale-95 transition-transform duration-300">
+            <div class="flex items-center gap-3.5 mb-4">
+                <div id="alert-icon" class="w-11 h-11 rounded-full flex items-center justify-center text-xl shadow-inner"></div>
+                <h3 id="alert-title" class="text-base font-bold text-slate-900">Notification</h3>
+            </div>
+            <p id="alert-message" class="text-sm text-slate-600 leading-relaxed mb-6"></p>
+            <button onclick="closeAlert()" class="w-full bg-[#136934] hover:bg-[#0a4d26] text-white font-bold py-2.5 px-4 rounded-xl shadow-md transition-all text-sm">
+                Dismiss
+            </button>
+        </div>
+    </div>
+
+    <!-- 📥 App Install Banner -->
+    <div id="install-banner" class="hidden fixed top-20 left-4 right-4 bg-white border border-emerald-100 shadow-2xl p-4 rounded-2xl z-[9999] flex items-center justify-between animate-fade-in-down">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-[#0a4d26] text-white flex items-center justify-center text-xl rounded-xl shadow-inner">🌱</div>
+            <div>
+                <h4 class="text-xs font-bold text-slate-800 leading-tight">Install AgriSmart App</h4>
+                <p class="text-[10px] text-slate-400 mt-0.5">Add to your home screen for quick access</p>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="dismissInstall()" class="text-xs text-slate-400 px-2 py-1 font-medium hover:text-slate-600">Later</button>
+            <button onclick="triggerInstall()" class="bg-[#136934] text-white text-xs px-3 py-1.5 rounded-xl font-bold shadow-md hover:bg-[#0a4d26]">Install</button>
+        </div>
+    </div>
+
+    <!-- 📱 Mobile Top Header -->
+    <div class="md:hidden bg-[#0a4d26] text-white p-4 flex justify-between items-center sticky top-0 z-50 shadow-md">
+        <div class="flex items-center gap-3">
+            <span class="text-xl">☰</span>
+            <h1 class="text-lg font-bold tracking-wide">AgriSmart</h1>
+        </div>
+        <button id="btn-install-nav" onclick="triggerInstall()" class="hidden bg-emerald-700 text-xs px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 shadow-sm">
+            📥 Install App
+        </button>
+    </div>
+
+    <!-- 🟢 Desktop Sidebar -->
+    <aside class="hidden md:flex w-full md:w-64 bg-[#0a4d26] text-white flex-col justify-between p-5 shrink-0 shadow-xl">
+        <div>
+            <div class="flex items-center gap-3 mb-8 px-2">
+                <span class="text-2xl">🌱</span>
+                <h1 class="text-xl font-bold tracking-wide">AgriSmart</h1>
+            </div>
+            <nav class="space-y-1">
+                <a href="#" class="flex items-center gap-3 bg-[#136934] text-white px-4 py-3 rounded-xl text-sm font-semibold transition-all"><span>📊</span> Dashboard</a>
+                <a href="#" class="flex items-center gap-3 text-emerald-100 hover:bg-[#136934]/50 px-4 py-3 rounded-xl text-sm font-medium transition-all"><span>🗺️</span> Crop Map</a>
+                <a href="#" class="flex items-center gap-3 text-emerald-100 hover:bg-[#136934]/50 px-4 py-3 rounded-xl text-sm font-medium transition-all"><span>💧</span> Moisture Stress</a>
+                <a href="#" class="flex items-center gap-3 text-emerald-100 hover:bg-[#136934]/50 px-4 py-3 rounded-xl text-sm font-medium transition-all"><span>⚖️</span> Irrigation Advisory</a>
+                <a href="#" class="flex items-center gap-3 text-emerald-100 hover:bg-[#136934]/50 px-4 py-3 rounded-xl text-sm font-medium transition-all"><span>🔔</span> Alerts</a>
+                <a href="#" class="flex items-center gap-3 text-emerald-100 hover:bg-[#136934]/50 px-4 py-3 rounded-xl text-sm font-medium transition-all"><span>📄</span> Reports</a>
+                <a href="#" class="flex items-center gap-3 text-emerald-100 hover:bg-[#136934]/50 px-4 py-3 rounded-xl text-sm font-medium transition-all"><span>🌤️</span> Weather</a>
+                <a href="#" class="flex items-center gap-3 text-emerald-100 hover:bg-[#136934]/50 px-4 py-3 rounded-xl text-sm font-medium transition-all"><span>⚙️</span> Settings</a>
+            </nav>
+        </div>
+        <div class="border-t border-emerald-800 pt-4 mt-6 flex items-center gap-3 px-2">
+            <div class="w-10 h-10 bg-emerald-700 rounded-full flex items-center justify-center text-lg font-bold shadow-inner">P</div>
+            <div>
+                <div class="text-sm font-bold text-white leading-tight">Pravin</div>
+                <div class="text-xs text-emerald-300">Administrator</div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ⚪ Main Panel -->
+    <main class="flex-1 flex flex-col min-w-0">
+        <header class="bg-white border-b border-slate-200 py-3 px-4 md:py-4 md:px-6 flex justify-between items-center shadow-sm">
+            <h2 class="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">🛰️ Satellite Insights Dashboard</h2>
+            <div class="flex items-center gap-2 text-xs md:text-sm font-bold bg-emerald-50 border border-emerald-100 text-[#136934] px-3.5 py-2 rounded-xl shadow-sm">
+                <span>📅</span> <span id="current-date-badge">--</span>
+            </div>
+        </header>
+
+        <!-- Grid Layout -->
+        <div class="p-4 md:p-6 max-w-[1600px] w-full mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+            <div class="lg:col-span-2 space-y-4 md:space-y-6">
+                <!-- Map Card -->
+                <div class="bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h3 class="text-base md:text-lg font-bold text-slate-800 flex items-center gap-2">🗺️ Draw Farm Boundary</h3>
+                            <p class="text-[11px] text-slate-400 mt-0.5">* Use the <b>Polygon tool</b> on the left side of the map to select your field.</p>
+                        </div>
+                        <span id="status-tag" class="text-[11px] bg-slate-100 text-slate-500 py-1 px-2.5 rounded-full font-bold shadow-sm transition-all">⚪ Waiting...</span>
+                    </div>
+                    <div id="map" class="h-[320px] md:h-[420px] w-full rounded-xl border border-slate-200 z-0 shadow-inner"></div>
+                    <button id="btn-analyze" onclick="savePolygonData()" class="mt-4 w-full bg-[#136934] hover:bg-[#0a4d26] text-white font-bold py-3 px-4 rounded-xl shadow-md hover:shadow-lg transition-all duration-150 flex justify-center items-center gap-2 text-sm md:text-base">
+                        🚀 Start Crop Health Analysis
+                    </button>
+                </div>
+
+                <!-- AI Recommendation Engine -->
+                <div class="bg-white rounded-2xl shadow-sm p-4 md:p-5 border border-slate-200 space-y-3">
+                    <h3 class="text-base md:text-lg font-bold flex items-center gap-2 text-slate-800">🤖 AI Agronomist & Field Advisory</h3>
+                    <div id="recommendations-box" class="text-xs md:text-sm">
+                        <div class="p-3 bg-slate-50 rounded-xl border-l-4 border-slate-400 text-slate-500 italic">💡 Draw your farm boundary on the map and click analyze to fetch dynamic remote sensing insights...</div>
+                    </div>
+                    <div id="chat-box" class="space-y-3" style="height:150px; overflow-y:auto; border:1px solid #e2e8f0; padding:12px; border-radius:12px; background-color: #f8fafc;">
+                        <div class="text-xs md:text-sm text-slate-400 italic p-1">Hello Pravin! Ask me anything about your crops or remote sensing metrics...</div>
+                    </div>
+                    <div class="flex gap-2">
+                        <input id="user-question" type="text" placeholder="Ask about fertilizer dosage, water stress..." class="flex-1 border border-slate-200 rounded-xl p-2.5 text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-slate-50 focus:bg-white transition-all" onkeypress="if(event.key === 'Enter') askAI()"/>
+                        <button onclick="startVoice()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 md:px-4 rounded-xl text-base transition-all shadow-sm flex items-center justify-center">🎙️</button>
+                        <button onclick="askAI()" class="bg-[#136934] hover:bg-[#0a4d26] text-white px-4 md:px-6 rounded-xl font-bold text-xs md:text-sm transition-all shadow-sm">Send</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Metrics -->
+            <div class="space-y-4 md:space-y-6">
+                <div class="bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center">
+                    <div>
+                        <h4 class="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">Crop Health Score</h4>
+                        <div id="crop-score" class="text-3xl md:text-4xl font-black text-slate-800 mt-1">--</div>
+                    </div>
+                    <div class="w-10 h-10 md:w-12 md:h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center text-lg md:text-xl shadow-sm">📈</div>
+                </div>
+
+                <div class="bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="font-bold text-slate-800 mb-3 flex items-center gap-2 text-xs md:text-sm uppercase tracking-wider">📊 Sentinel-2 Key Indices</h3>
+                    <div class="grid grid-cols-2 gap-3 md:gap-4">
+                        <div class="bg-slate-50 p-3 rounded-xl border-t-2 border-emerald-500"><div class="text-[10px] md:text-xs text-slate-400 font-bold">NDVI</div><div id="val-ndvi" class="text-lg md:text-xl font-extrabold text-slate-700 mt-0.5">--</div></div>
+                        <div class="bg-slate-50 p-3 rounded-xl border-t-2 border-blue-500"><div class="text-[10px] md:text-xs text-slate-400 font-bold">NDWI</div><div id="val-ndwi" class="text-lg md:text-xl font-extrabold text-slate-700 mt-0.5">--</div></div>
+                        <div class="bg-slate-50 p-3 rounded-xl border-t-2 border-purple-500"><div class="text-[10px] md:text-xs text-slate-400 font-bold">EVI</div><div id="val-evi" class="text-lg md:text-xl font-extrabold text-slate-700 mt-0.5">--</div></div>
+                        <div class="bg-slate-50 p-3 rounded-xl border-t-2 border-amber-500"><div class="text-[10px] md:text-xs text-slate-400 font-bold">SAVI</div><div id="val-savi" class="text-lg md:text-xl font-extrabold text-slate-700 mt-0.5">--</div></div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="font-bold text-slate-800 mb-3 flex items-center gap-2 text-xs md:text-sm uppercase tracking-wider">🛰️ Satellite Data Log</h3>
+                    <div class="space-y-2.5 text-xs md:text-sm mt-2">
+                        <p class="flex justify-between border-b border-slate-100 pb-2"><span class="text-slate-400">Pass Date:</span><span id="sat-date" class="font-semibold text-slate-700">--</span></p>
+                        <p class="flex justify-between border-b border-slate-100 pb-2"><span class="text-slate-400">Cloud Cover:</span><span class="font-semibold text-slate-700"><span id="cloud">--</span> %</span></p>
+                        <p class="flex justify-between border-b border-slate-100 pb-2"><span class="text-slate-400">Constellation:</span><span class="font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-[10px] md:text-xs">Sentinel-2</span></p>
+                        <p class="flex justify-between"><span class="text-slate-400">Resolution:</span><span class="font-semibold text-slate-700">10 Meters</span></p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="font-bold text-slate-800 mb-3 flex items-center gap-2 text-xs md:text-sm uppercase tracking-wider">🌤️ Live Weather Metrics</h3>
+                    <div class="grid grid-cols-2 gap-3 md:gap-4 mt-3">
+                        <div class="bg-amber-50/60 p-2.5 md:p-3 rounded-xl flex items-center gap-2.5">
+                            <div class="text-xl">🌡️</div><div><div class="text-[9px] md:text-[10px] uppercase font-bold text-slate-400">Temp</div><div id="temp" class="text-xs md:text-sm font-bold text-slate-700">-- °C</div></div>
+                        </div>
+                        <div class="bg-blue-50/60 p-2.5 md:p-3 rounded-xl flex items-center gap-2.5">
+                            <div class="text-xl">💧</div><div><div class="text-[9px] md:text-[10px] uppercase font-bold text-slate-400">Humidity</div><div id="humidity" class="text-xs md:text-sm font-bold text-slate-700">-- %</div></div>
+                        </div>
+                        <div class="bg-indigo-50/60 p-2.5 md:p-3 rounded-xl flex items-center gap-2.5">
+                            <div class="text-xl">🌧️</div><div><div class="text-[9px] md:text-[10px] uppercase font-bold text-slate-400">Rainfall</div><div id="rain" class="text-xs md:text-sm font-bold text-slate-700">-- mm</div></div>
+                        </div>
+                        <div class="bg-sky-50/60 p-2.5 md:p-3 rounded-xl flex items-center gap-2.5">
+                            <div class="text-xl">💨</div><div><div class="text-[9px] md:text-[10px] uppercase font-bold text-slate-400">Wind</div><div id="wind" class="text-xs md:text-sm font-bold text-slate-700">-- km/h</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 📱 Mobile Bottom Bar -->
+    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center py-2 z-[999] shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+        <button class="flex flex-col items-center gap-0.5 text-[#136934] font-bold text-[11px] w-full py-1">
+            <span class="text-lg">🏡</span> Dashboard
+        </button>
+        <button class="flex flex-col items-center gap-0.5 text-slate-400 text-[11px] w-full py-1">
+            <span class="text-lg">🗺️</span> Map
+        </button>
+        <button class="flex flex-col items-center gap-0.5 text-slate-400 text-[11px] w-full py-1">
+            <span class="text-lg">🔔</span> Alerts
+        </button>
+        <button class="flex flex-col items-center gap-0.5 text-slate-400 text-[11px] w-full py-1">
+            <span class="text-lg">📄</span> Reports
+        </button>
+        <button class="flex flex-col items-center gap-0.5 text-slate-400 text-[11px] w-full py-1">
+            <span class="text-lg">⚙️</span> Settings
+        </button>
+    </div>
+
+    <script>
+        // Zoom Lock Down Engine
+        window.addEventListener('keydown', function(e) {
+            if (e.ctrlKey === true || e.metaKey === true) {
+                if ([187, 189, 107, 109, 61, 173].includes(e.keyCode) || e.key === '+' || e.key === '-' || e.key === '0') {
+                    e.preventDefault();
+                }
+            }
+        }, { passive: false });
+
+        window.addEventListener('wheel', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        document.addEventListener('touchstart', function (e) {
+            if (e.touches.length > 1) { e.preventDefault(); }
+        }, { passive: false });
+
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function (e) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) { e.preventDefault(); }
+            lastTouchEnd = now;
+        }, false);
+
+        // Custom Modal Control
+        function openCustomAlert(title, message, type = 'info') {
+            const modal = document.getElementById('custom-alert');
+            const iconBox = document.getElementById('alert-icon');
+            const titleBox = document.getElementById('alert-title');
+            const messageBox = document.getElementById('alert-message');
+            titleBox.innerText = title;
+            messageBox.innerText = message;
+            if (type === 'error') {
+                iconBox.className = "w-11 h-11 rounded-full flex items-center justify-center text-xl shadow-inner bg-red-50 text-red-600";
+                iconBox.innerText = "❌";
+            } else if (type === 'warning') {
+                iconBox.className = "w-11 h-11 rounded-full flex items-center justify-center text-xl shadow-inner bg-amber-50 text-amber-600";
+                iconBox.innerText = "⚠️";
+            } else {
+                iconBox.className = "w-11 h-11 rounded-full flex items-center justify-center text-xl shadow-inner bg-emerald-50 text-[#136934]";
+                iconBox.innerText = "🌱";
+            }
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.firstElementChild.classList.remove('scale-95');
+                modal.firstElementChild.classList.add('scale-100');
+            }, 50);
+        }
+
+        function closeAlert() {
+            const modal = document.getElementById('custom-alert');
+            modal.firstElementChild.classList.remove('scale-100');
+            modal.firstElementChild.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); }, 150);
+        }
+
+        // PWA Engine
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                const swCode = `self.addEventListener('install', e => self.skipWaiting()); self.addEventListener('fetch', e => e.respondWith(fetch(e.request)));`;
+                const blob = new Blob([swCode], { type: 'application/javascript' });
+                navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(err => console.log(err));
+            });
+        }
+
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault(); deferredPrompt = e;
+            document.getElementById('install-banner').classList.remove('hidden');
+            document.getElementById('btn-install-nav').classList.remove('hidden');
+        });
+
+        function triggerInstall() {
+            if (!deferredPrompt) { 
+                openCustomAlert("App Installation", "Please open your browser menu settings options and click 'Add to Home screen' manually.", "warning"); 
+                return; 
+            }
+            document.getElementById('install-banner').classList.add('hidden');
+            deferredPrompt.prompt(); deferredPrompt = null;
+        }
+
+        function dismissInstall() { document.getElementById('install-banner').classList.add('hidden'); }
+
+        // Map
+        const map = L.map('map', { fadeAnimation: false }).setView([19.2736, 76.5452], 14);
+        L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] }).addTo(map);
+        const drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+        const drawControl = new L.Control.Draw({
+            edit: { featureGroup: drawnItems },
+            draw: { polygon: { allowIntersection: false, showArea: true, shapeOptions: { color: '#10b981', weight: 3 } }, polyline: false, circle: false, circlemarker: false, marker: false, rectangle: false }
+        });
+        map.addControl(drawControl);
+        let currentPolygonCoords = null;
+        map.on(L.Draw.Event.CREATED, function (e) {
+            drawnItems.clearLayers();
+            currentPolygonCoords = e.layer.toGeoJSON().geometry.coordinates[0];
+            drawnItems.addLayer(e.layer);
+        });
+
+        document.getElementById('current-date-badge').innerText = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+        async function savePolygonData() {
+            if (!currentPolygonCoords) { 
+                openCustomAlert("Boundary Required", "Please draw a farm polygon boundary on the map first!", "warning"); 
+                return; 
+            }
+            const btn = document.getElementById("btn-analyze");
+            const statusTag = document.getElementById("status-tag");
+            btn.disabled = true;
+            statusTag.className = "text-[11px] bg-amber-100 text-amber-700 py-1 px-2.5 rounded-full inline-block font-semibold animate-pulse";
+            statusTag.innerText = "⚡ Fetching...";
+            btn.innerHTML = `🛰️ Accessing Spatial Satellite Data...`;
+
+            try {
+                const response = await fetch("https://smart-crop-health-dashboard.onrender.com/analyze-crop", {
+                    method: "POST", 
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ polygon: currentPolygonCoords })
+                });
+                if (!response.ok) throw new Error("API Server Connection Lost");
+                const data = await response.json();
+                document.getElementById('val-ndvi').innerText = (data.ndvi ?? 0).toFixed(3);
+                document.getElementById('val-ndwi').innerText = (data.ndwi ?? 0).toFixed(3);
+                document.getElementById("val-evi").innerText = data.evi?.toFixed(3) || "0.000";
+                document.getElementById("val-savi").innerText = data.savi?.toFixed(3) || "0.000";
+                document.getElementById("sat-date").innerText = data.satellite_date || "N/A";
+                document.getElementById("cloud").innerText = data.cloud_percentage ?? "0";
+                document.getElementById("temp").innerText = (data.weather?.temperature ?? 0) + " °C";
+                document.getElementById("humidity").innerText = (data.weather?.humidity ?? "--") + " %";
+                document.getElementById("rain").innerText = (data.weather?.rainfall ?? 0) + " mm";
+                document.getElementById("wind").innerText = (data.weather?.wind_speed ?? "--") + " km/h";
+                document.getElementById("crop-score").innerText = (data.crop_health_score ?? Math.round((data.ndvi ?? 0) * 100)) + " %";
+                statusTag.className = (data.ndvi ?? 0) > 0.4 ? "text-[11px] bg-green-100 text-green-700 py-1 px-2.5 rounded-full inline-block font-bold" : "text-[11px] bg-amber-100 text-amber-700 py-1 px-2.5 rounded-full inline-block font-bold";
+                statusTag.innerText = (data.ndvi ?? 0) > 0.4 ? "🟢 Healthy" : "🟡 Moderate";
+                document.getElementById("recommendations-box").innerHTML = `<div class="p-3 bg-green-50 rounded-xl border-l-4 border-green-600 whitespace-pre-line text-slate-700 leading-6 font-medium shadow-sm"><span class="font-bold text-[#136934] block mb-1">📋 Satellite Advisory Insights:</span>${data.ai_advice}</div>`;
+            } catch (error) {
+                openCustomAlert("Data Error", "Failed to retrieve logs: " + error.message, "error");
+                statusTag.innerText = "❌ Failed";
+            } finally {
+                btn.innerHTML = "🚀 Start Crop Health Analysis";
+                btn.disabled = false;
+            }
+        }
+
+        async function askAI() {
+            const inputField = document.getElementById("user-question");
+            const question = inputField.value.trim();
+            if (!question) return;
+            const chatBox = document.getElementById("chat-box");
+            chatBox.innerHTML += `<div class="flex justify-end mb-2"><div class="bg-[#136934] text-white p-2.5 rounded-xl text-xs max-w-[80%] font-medium shadow-sm">${question}</div></div>`;
+            inputField.value = "";
+            chatBox.scrollTop = chatBox.scrollHeight;
+            const loadingId = "load-" + Date.now();
+            chatBox.innerHTML += `<div class="flex justify-start mb-2" id="${loadingId}"><div class="bg-slate-200 text-slate-600 p-2.5 rounded-xl text-xs italic animate-pulse">Processing query... 🤖</div></div>`;
+            try {
+                const response = await fetch("https://smart-crop-health-dashboard.onrender.com/chat-assistant", {
+                    method: "POST", 
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ question: question })
+                });
+                document.getElementById(loadingId)?.remove();
+                const data = await response.json();
+                chatBox.innerHTML += `<div class="flex justify-start mb-2"><div class="bg-white text-slate-800 p-2.5 rounded-xl text-xs border border-slate-200 max-w-[80%] whitespace-pre-line font-medium shadow-sm">${data.reply || data.response}</div></div>`;
+            } catch (error) {
+                document.getElementById(loadingId)?.remove();
+                chatBox.innerHTML += `<div class="flex justify-start mb-2"><div class="bg-red-50 text-red-600 p-2.5 rounded-xl text-xs border border-red-200">❌ Failed to stream response.</div></div>`;
+            }
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function startVoice() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) { openCustomAlert("Web Speech Error", "Browser does not support voice input.", "error"); return; }
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.start();
+            recognition.onresult = function(e) { document.getElementById("user-question").value = e.results[0][0].transcript; };
+        }
+    </script>
+</body>
+</html>

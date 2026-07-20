@@ -1,0 +1,16 @@
+{
+  "name": "AgriSmart Dashboard",
+  "short_name": "AgriSmart",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme-color": "#0a4d26",
+  "icons": [
+    {
+      "src": "mauli.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
